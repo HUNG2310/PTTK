@@ -1,0 +1,24 @@
+/* CSS cho movie card, promotion card, ... */
+.movie-card {
+    text-align: center;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transition: transform 0.2s ease-in-out;
+}
+.movie-card:hover { transform: translateY(-5px); }
+.movie-card img { border-top-left-radius: 8px; border-top-right-radius: 8px; }
+.movie-card .movie-caption { padding: 1.5rem; }
+
+.movie-card-coming-soon .poster-wrapper { position: relative; overflow: hidden; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+.movie-card-coming-soon .poster-wrapper img { transition: transform 0.3s ease; }
+.movie-card-coming-soon .poster-wrapper:hover img { transform: scale(1.05); }
+.release-date-badge { position: absolute; bottom: 10px; left: 10px; background-color: rgba(255, 200, 0, 0.9); color: #212529; padding: 5px 10px; border-radius: 5px; font-size: 0.9em; font-weight: bold; }
+.movie-card-coming-soon .movie-caption { padding-top: 1rem; text-align: center; }
+
+.promotion-card { transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out; border: none; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+.promotion-card:hover { transform: translateY(-5px); box-shadow: 0 8px 16px rgba(0,0,0,0.2); }
