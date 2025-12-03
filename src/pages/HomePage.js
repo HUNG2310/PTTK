@@ -1,12 +1,12 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { allMovies } from '../data/allMovies';
 
-
+// --- COMPONENT THẺ PHIM ĐANG CHIẾU (Dùng dữ liệu từ SQL) ---
 function MovieCard({ movie }) {
-  const detailUrl = `/movie/${movie.id}`; 
-  const imageUrl = process.env.PUBLIC_URL + movie.posterUrl;
+  // SQL trả về 'movie_id', không phải 'id'
+  const detailUrl = `/movie/${movie.movie_id}`; 
+  // SQL trả về 'poster_url'
+  const imageUrl = process.env.PUBLIC_URL + movie.poster_url;
 
   return (
     <div className="col-md-4 col-sm-6 mb-4">
@@ -24,9 +24,13 @@ function MovieCard({ movie }) {
   );
 }
 
+// --- COMPONENT THẺ PHIM SẮP CHIẾU (Dùng dữ liệu từ SQL) ---
 function ComingSoonMovieCard({ movie }) {
-  const detailUrl = `/movie/${movie.id}`;
-  const imageUrl = process.env.PUBLIC_URL + movie.posterUrl;
+  const detailUrl = `/movie/${movie.movie_id}`;
+  const imageUrl = process.env.PUBLIC_URL + movie.poster_url;
+
+  // Format ngày từ SQL (VD: 2025-12-25T00:00:00.000Z) sang dd/mm/yyyy
+  const formattedDate = new Date(movie.release_date).toLocaleDateString('vi-VN');
 
   return (
     <div className="col-lg-4 col-sm-6 mb-4">
@@ -37,8 +41,7 @@ function ComingSoonMovieCard({ movie }) {
           </Link>
           <div className="release-date-badge">
             <i className="far fa-calendar-alt me-1"></i>
-     
-            Dự kiến {new Date(movie.release_date).toLocaleDateString('vi-VN')}
+            Dự kiến {formattedDate}
           </div>
         </div>
         <div className="movie-caption">
@@ -51,51 +54,67 @@ function ComingSoonMovieCard({ movie }) {
   );
 }
 
-
-
 function HomePage() {
- 
   const [nowShowingMovies, setNowShowingMovies] = useState([]);
   const [comingSoonMovies, setComingSoonMovies] = useState([]);
+  const [loading, setLoading] = useState(true); // Thêm trạng thái loading
 
   useEffect(() => {
- 
-    const nowShowing = allMovies
-      .filter(m => m.status === 'now_showing')
-      .slice(0, 3); 
-    setNowShowingMovies(nowShowing);
+    // Gọi API từ Backend Node.js
+    fetch('http://localhost:5000/api/movies')
+      .then(response => response.json())
+      .then(data => {
+        // 1. Lọc phim ĐANG CHIẾU (status trong SQL là 'now_showing')
+        const nowShowing = data
+          .filter(m => m.status === 'now_showing')
+          .slice(0, 3); // Lấy 3 phim đầu
+        setNowShowingMovies(nowShowing);
 
-
-    const comingSoon = allMovies
-      .filter(m => m.status === 'coming_soon')
-      .slice(0, 3); 
-    setComingSoonMovies(comingSoon);
-
-  }, []); 
+        // 2. Lọc phim SẮP CHIẾU (status trong SQL là 'coming_soon')
+        const comingSoon = data
+          .filter(m => m.status === 'coming_soon')
+          .slice(0, 3); // Lấy 3 phim đầu
+        setComingSoonMovies(comingSoon);
+        
+        setLoading(false); // Tắt loading
+      })
+      .catch(error => {
+        console.error('Lỗi kết nối API:', error);
+        setLoading(false);
+      });
+  }, []);
 
   return (
     <> 
-
-    
+      {/* --- Masthead (Giữ nguyên) --- */}
       <header className="masthead">
         <div className="container">
           <div className="masthead-subheading">Xem phim yêu thích của bạn</div>
           <div className="masthead-heading text-uppercase">Đặt Vé Ngay</div>
-        
         </div>
       </header>
       
+      {/* --- Phim Đang Chiếu (Đã kết nối Database) --- */}
       <section className="page-section" id="now-showing">
         <div className="container">
           <div className="text-center">
             <h2 className="section-heading text-uppercase">Phim Đang Chiếu</h2>
             <h3 className="section-subheading text-muted">Chọn phim và đặt vé ngay hôm nay.</h3>
           </div>
-          <div className="row text-center">
-            {nowShowingMovies.map(movie => (
-              <MovieCard key={movie.id} movie={movie} />
-            ))}
-          </div>
+          
+          {loading ? (
+            <p className="text-center">Đang tải dữ liệu từ máy chủ...</p>
+          ) : (
+            <div className="row text-center">
+              {nowShowingMovies.length > 0 ? (
+                nowShowingMovies.map(movie => (
+                  <MovieCard key={movie.movie_id} movie={movie} />
+                ))
+              ) : (
+                <p>Chưa có phim đang chiếu.</p>
+              )}
+            </div>
+          )}
 
           <div className="text-center mt-4">
             <Link to="/movies/now-showing" className="btn btn-primary btn-xl text-uppercase">
@@ -105,18 +124,27 @@ function HomePage() {
         </div>
       </section>
 
-
+      {/* --- Phim Sắp Chiếu (Đã kết nối Database) --- */}
       <section className="page-section bg-light" id="coming-soon">
         <div className="container">
           <div className="text-center">
             <h2 className="section-heading text-uppercase">Phim Sắp Chiếu</h2>
             <h3 className="section-subheading text-muted">Những bom tấn không thể bỏ lỡ sắp ra mắt.</h3>
           </div>
-          <div className="row">
-            {comingSoonMovies.map(movie => (
-              <ComingSoonMovieCard key={movie.id} movie={movie} />
-            ))}
-          </div>
+          
+          {loading ? (
+            <p className="text-center">Đang tải dữ liệu...</p>
+          ) : (
+            <div className="row">
+              {comingSoonMovies.length > 0 ? (
+                comingSoonMovies.map(movie => (
+                  <ComingSoonMovieCard key={movie.movie_id} movie={movie} />
+                ))
+              ) : (
+                <p className="text-center w-100">Chưa có phim sắp chiếu.</p>
+              )}
+            </div>
+          )}
 
           <div className="text-center mt-4">
             <Link to="/movies/coming-soon" className="btn btn-primary btn-xl text-uppercase">
@@ -126,6 +154,7 @@ function HomePage() {
         </div>
       </section>
 
+      {/* --- Hệ Thống Rạp (Giữ nguyên tĩnh) --- */}
       <section className="page-section bg-light" id="theaters">
         <div className="container">
           <div className="text-center">
@@ -152,7 +181,6 @@ function HomePage() {
                 </div>
               </div>
             </div>
-            {/* Rạp 2 */}
             <div className="col-md-6 mb-4">
               <div className="card h-100">
                 <div className="row g-0">
@@ -176,7 +204,7 @@ function HomePage() {
         </div>
       </section>
 
-      {/* --- Khuyến Mãi --- */}
+      {/* --- Khuyến Mãi (Giữ nguyên tĩnh) --- */}
       <section className="page-section" id="promotions">
         <div className="container">
           <div className="text-center">
@@ -184,7 +212,6 @@ function HomePage() {
             <h3 className="section-subheading text-muted">Luôn có ưu đãi dành cho bạn.</h3>
           </div>
           <div className="row">
-            {/* Khuyến mãi 1 */}
             <div className="col-md-6 col-lg-4 mb-5">
               <div className="card h-100 promotion-card">
                 <img src={process.env.PUBLIC_URL + "/assets/img/discount-1.png"} className="card-img-top" alt="Thứ hai vui vẻ" />
@@ -196,7 +223,6 @@ function HomePage() {
                 </div>
               </div>
             </div>
-            {/* Khuyến mãi 2 */}
             <div className="col-md-6 col-lg-4 mb-5">
               <div className="card h-100 promotion-card">
                 <img src={process.env.PUBLIC_URL + "/assets/img/discount-2.png"} className="card-img-top" alt="Combo bắp nước" />
@@ -208,7 +234,6 @@ function HomePage() {
                 </div>
               </div>
             </div>
-            {/* Khuyến mãi 3 */}
             <div className="col-md-6 col-lg-4 mb-5">
               <div className="card h-100 promotion-card">
                 <img src={process.env.PUBLIC_URL + "/assets/img/discount-3.png"} className="card-img-top" alt="Quà tặng thành viên" />
@@ -223,8 +248,6 @@ function HomePage() {
           </div>
         </div>
       </section>
-
-
     </>
   );
 }
