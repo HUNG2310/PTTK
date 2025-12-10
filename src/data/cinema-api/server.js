@@ -3,22 +3,23 @@ const sql = require('mssql');
 const cors = require('cors');
 
 const app = express();
-app.use(cors()); // Cho phép React truy cập
+app.use(cors());
 
-// --- CẤU HÌNH DATABASE (SỬA LẠI CHO ĐÚNG MÁY BẠN) ---
+// --- CẤU HÌNH DATABASE (QUAN TRỌNG) ---
 const dbConfig = {
-    user: 'sa', // Hoặc tên tài khoản bạn đã tạo (ví dụ: cinema_admin)
-    password: 'Hungle@23102004', // <--- BẠN PHẢI ĐIỀN MẬT KHẨU SQL VÀO ĐÂY
-    server: 'HUNG\\MSSQLSERVER02', // <--- QUAN TRỌNG: Phải dùng 2 dấu gạch chéo \\
-    database: 'cinemaWeb', // Tên database trong Ảnh 2
+    user: 'sa', 
+    password: '123456', // Mật khẩu của bạn
+    server: 'localhost', 
+    port: 62800, // <--- SỐ NÀY LẤY TỪ HÌNH ẢNH LOG CỦA BẠN
+    database: 'cinemaWeb',
     options: {
-        encrypt: false, 
+        encrypt: false,
         trustServerCertificate: true,
-        enableArithAbort: true,
-        instanceName: 'MSSQLSERVER02' // Thêm dòng này để Node.js tìm đúng server
+        enableArithAbort: true
     }
 };
-// --- API 1: LẤY DANH SÁCH TẤT CẢ PHIM ---
+
+// --- API 1: LẤY DANH SÁCH PHIM ---
 app.get('/api/movies', async (req, res) => {
     try {
         await sql.connect(dbConfig);
@@ -26,7 +27,7 @@ app.get('/api/movies', async (req, res) => {
         res.json(result.recordset);
     } catch (err) {
         console.error(err);
-        res.status(500).send('Lỗi Server');
+        res.status(500).send('Lỗi kết nối SQL');
     }
 });
 
@@ -35,13 +36,34 @@ app.get('/api/movies/:id', async (req, res) => {
     try {
         await sql.connect(dbConfig);
         const result = await sql.query(`SELECT * FROM Movies WHERE movie_id = ${req.params.id}`);
-        if(result.recordset.length > 0) {
-            res.json(result.recordset[0]);
-        } else {
-            res.status(404).send('Không tìm thấy phim');
-        }
+        res.json(result.recordset[0]);
     } catch (err) {
-        console.error(err);
+        res.status(500).send('Lỗi Server');
+    }
+});
+
+// --- API 3: LẤY DANH SÁCH RẠP ---
+app.get('/api/cinemas', async (req, res) => {
+    try {
+        await sql.connect(dbConfig);
+        // Thêm dbo. và kiểm tra chính xác tên bảng
+        const result = await sql.query('SELECT * FROM dbo.Cinemas'); 
+        res.json(result.recordset);
+    } catch (err) {
+        console.error("Lỗi lấy rạp:", err); // In lỗi ra console để debug
+        res.status(500).send('Lỗi Server');
+    }
+});
+
+// --- API 4: LẤY DANH SÁCH KHUYẾN MÃI ---
+app.get('/api/promotions', async (req, res) => {
+    try {
+        await sql.connect(dbConfig);
+        // Thêm dbo. và bỏ điều kiện WHERE tạm thời để test
+        const result = await sql.query("SELECT * FROM dbo.Promotions"); 
+        res.json(result.recordset);
+    } catch (err) {
+        console.error("Lỗi lấy khuyến mãi:", err); // In lỗi ra console
         res.status(500).send('Lỗi Server');
     }
 });

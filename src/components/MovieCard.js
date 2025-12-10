@@ -2,9 +2,12 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 
 function MovieCard({ movie }) {
-
-  const detailUrl = `/movie/${movie.id}`; 
-  const imageUrl = process.env.PUBLIC_URL + movie.posterUrl;
+  // SỬA 1: Dùng movie.movie_id thay vì movie.id
+  const detailUrl = `/movie/${movie.movie_id}`; 
+  
+  // SỬA 2: Dùng movie.poster_url thay vì movie.posterUrl
+  // SQL lưu đường dẫn dạng '/assets/img/...', ta ghép thêm PUBLIC_URL để React hiểu
+  const imageUrl = process.env.PUBLIC_URL + movie.poster_url;
 
   return (
     <div className="col-md-4 col-sm-6 mb-4">

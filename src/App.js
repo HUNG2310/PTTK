@@ -6,6 +6,9 @@ import HomePage from './pages/HomePage';
 import MovieDetailPage from './pages/MovieDetailPage';
 import SeatSelectionPage from './pages/SeatSelectionPage';
 import CheckoutPage from './pages/CheckoutPage';
+import AllNowShowingPage from './pages/AllNowShowingPage';
+import AllComingSoonPage from './pages/AllComingSoonPage';
+import LoginPage from './pages/LoginPage';
 // import MovieDetailPage from './pages/MovieDetailPage'; // Trang chi tiết
 // import SeatSelectionPage from './pages/SeatSelectionPage'; // Trang chọn ghế
 // import CheckoutPage from './pages/CheckoutPage'; // Trang thanh toán
@@ -31,6 +34,9 @@ function App() {
           <Route path="movie/:id" element={<MovieDetailPage />} />
           <Route path="booking/seats" element={<SeatSelectionPage />} />
           <Route path="booking/checkout" element={<CheckoutPage />} />
+          <Route path="movies/now-showing" element={<AllNowShowingPage />} />
+          <Route path="movies/coming-soon" element={<AllComingSoonPage />} />
+          <Route path="/login" element={<LoginPage />} />
           {/* <Route path="movie/:id" element={<MovieDetailPage />} /> */}
           {/* ... các trang khác ... */}
         </Route>

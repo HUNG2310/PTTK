@@ -1,186 +1,187 @@
-// src/pages/SeatSelectionPage.js
-import React, { useState } from 'react'; // Import useState để quản lý state
-import { Link, useNavigate } from 'react-router-dom'; // Dùng Link và useNavigate
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 
-// ĐỊNH NGHĨA GIÁ VÉ
 const TICKET_PRICE = 75000;
-
-// DỮ LIỆU GHẾ (Trong ứng dụng thật, bạn sẽ 'fetch' cái này từ API)
-// Chúng ta định nghĩa dữ liệu tĩnh để render
-const seatLayout = {
-  A: { seats: [1, 2, 3, 4, 5, 6, 7, 8], occupied: [3, 4], spacerAfter: 4 },
-  B: { seats: [1, 2, 3, 4, 5, 6, 7, 8], occupied: [], spacerAfter: 4 },
-  C: { seats: [1, 2, 3, 4, 5, 6, 7, 8], occupied: [1, 2, 8], spacerAfter: 4 },
-  D: { seats: [1, 2, 3, 4, 5, 6, 7, 8], occupied: [5], spacerAfter: 4 },
-};
+const SHOWTIME_ID = 1; // (Vẫn tạm fix cứng, sau này sẽ lấy từ URL params)
 
 function SeatSelectionPage() {
-  
-  // --- STATE ---
-  // Dùng 'useState' để theo dõi các ghế đang được chọn
-  // Khởi tạo với 2 ghế 'B6', 'B7' như trong file HTML
-  const [selectedSeats, setSelectedSeats] = useState([]);
-  
-  // useNavigate hook để chuyển trang khi bấm "Tiếp tục"
+  const [seatsData, setSeatsData] = useState({}); // Dữ liệu ghế theo hàng
+  const [selectedSeatIds, setSelectedSeatIds] = useState([]); // ID các ghế đang chọn
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
-  // --- HÀM XỬ LÝ SỰ KIỆN ---
-  const handleSeatClick = (seatName) => {
-    // Kiểm tra xem ghế đã được chọn chưa
-    if (selectedSeats.includes(seatName)) {
-      // Nếu đã chọn -> Bỏ chọn (tạo mảng mới loại bỏ ghế này)
-      setSelectedSeats(selectedSeats.filter(s => s !== seatName));
+  // --- 1. LẤY THÔNG TIN USER TỪ LOCAL STORAGE ---
+  const storedUser = JSON.parse(localStorage.getItem('currentUser'));
+
+  // --- 2. KIỂM TRA ĐĂNG NHẬP & TẢI GHẾ ---
+  useEffect(() => {
+    // Nếu chưa đăng nhập -> Chuyển về trang Login
+    if (!storedUser) {
+      alert("Bạn cần đăng nhập để đặt vé!");
+      navigate('/login');
+      return;
+    }
+
+    // Tải sơ đồ ghế từ API
+    fetch(`http://localhost:5000/api/showtimes/${SHOWTIME_ID}/seats`)
+      .then(res => res.json())
+      .then(data => {
+        // Gom nhóm ghế theo hàng (Row A, Row B...)
+        const groupedSeats = {};
+        data.forEach(seat => {
+          if (!groupedSeats[seat.row_char]) {
+            groupedSeats[seat.row_char] = [];
+          }
+          groupedSeats[seat.row_char].push(seat);
+        });
+        setSeatsData(groupedSeats);
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error("Lỗi tải ghế:", err);
+        setLoading(false);
+      });
+  }, [navigate, storedUser]); // Thêm dependencies để React theo dõi
+
+  // --- 3. XỬ LÝ KHI BẤM VÀO GHẾ ---
+  const handleSeatClick = (seat) => {
+    if (seat.is_booked) return; // Nếu ghế đã bán (màu đen) thì không làm gì
+
+    if (selectedSeatIds.includes(seat.seat_id)) {
+      // Bỏ chọn
+      setSelectedSeatIds(selectedSeatIds.filter(id => id !== seat.seat_id));
     } else {
-      // Nếu chưa chọn -> Thêm vào (tạo mảng mới với ghế này)
-      setSelectedSeats([...selectedSeats, seatName]);
+      // Chọn mới
+      setSelectedSeatIds([...selectedSeatIds, seat.seat_id]);
     }
   };
 
-  // --- HÀM TÍNH TOÁN ---
-  // Tính tổng tiền dựa trên số lượng ghế đã chọn
-  const totalPrice = selectedSeats.length * TICKET_PRICE;
+  // --- 4. XỬ LÝ ĐẶT VÉ (GỬI VỀ SERVER) ---
+  const handleBooking = async () => {
+    if (!storedUser) {
+      alert("Vui lòng đăng nhập lại!");
+      navigate('/login');
+      return;
+    }
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    // Chuyển sang trang checkout
-    // (Trong tương lai, bạn có thể lưu 'selectedSeats' vào đâu đó
-    // trước khi chuyển trang, ví dụ: Context hoặc LocalStorage)
-    navigate('/booking/checkout');
+    if (selectedSeatIds.length === 0) {
+      alert("Vui lòng chọn ít nhất 1 ghế!");
+      return;
+    }
+
+    const bookingData = {
+      user_id: storedUser.id, // <--- DÙNG ID THẬT TỪ USER ĐÃ ĐĂNG NHẬP
+      showtime_id: SHOWTIME_ID,
+      total_amount: selectedSeatIds.length * TICKET_PRICE,
+      seat_ids: selectedSeatIds
+    };
+
+    try {
+      const response = await fetch('http://localhost:5000/api/booking', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(bookingData)
+      });
+      
+      const result = await response.json();
+      if (result.success) {
+        alert("Đặt vé thành công!");
+        navigate('/'); // Quay về trang chủ
+      } else {
+        alert("Lỗi: " + (result.message || "Có lỗi xảy ra."));
+      }
+    } catch (error) {
+      console.error("Lỗi đặt vé:", error);
+      alert("Lỗi kết nối server.");
+    }
   };
 
+  if (loading) return <div className="text-center mt-5">Đang tải sơ đồ ghế...</div>;
+
   return (
-    <div className="bg-light">
-      
-      {/* --- THANH NAV ĐƠN GIẢN --- */}
+    <div className="bg-light" style={{minHeight: '100vh', paddingBottom: '50px'}}>
+      {/* Navbar đơn giản */}
       <nav className="navbar navbar-expand-lg navbar-dark bg-dark">
-        <div className="container">
-          <Link className="navbar-brand" to="/"><h4>Cinema Web</h4></Link>
-        </div>
+        <div className="container"><Link className="navbar-brand" to="/"><h4>Cinema Web</h4></Link></div>
       </nav>
 
-      {/* --- THANH TIẾN TRÌNH ĐẶT VÉ (BƯỚC 2) --- */}
+      {/* Thanh tiến trình */}
       <div className="booking-progress-bar">
-        <div className="container">
-          <div className="row">
-            <div className="step completed">
-              <div className="step-content">
-                <div className="step-number"><i className="fas fa-check"></i></div>
-                <div className="step-label">Chọn Suất</div>
-              </div>
-            </div>
-            <div className="step active">
-              <div className="step-content">
-                <div className="step-number">2</div>
-                <div className="step-label">Chọn Ghế</div>
-              </div>
-            </div>
-            <div className="step">
-              <div className="step-content">
-                <div className="step-number">3</div>
-                <div className="step-label">Thanh Toán</div>
-              </div>
-            </div>
-          </div>
-        </div>
+         <div className="container">
+             <div className="row text-center">
+                 <div className="col step active">2. Chọn Ghế</div>
+             </div>
+         </div>
       </div>
 
-      {/* --- NỘI DUNG CHỌN GHẾ --- */}
       <div className="container my-5">
         <div className="row">
+          {/* Cột trái: Sơ đồ ghế */}
           <div className="col-lg-8">
-            <div className="seat-plan-wrapper">
-              <h3 className="text-center">Phòng chiếu 01</h3>
-              <div className="screen">MÀN HÌNH</div>
+            <div className="seat-plan-wrapper bg-white p-4 rounded shadow-sm text-center">
+              <h3>Phòng chiếu 01</h3>
+              <div className="screen bg-dark text-white p-2 mb-4 mx-auto" style={{maxWidth: '80%'}}>MÀN HÌNH</div>
               
-              {/* --- VẼ SƠ ĐỒ GHẾ ĐỘNG TỪ STATE --- */}
               <div className="seat-map">
-                {Object.keys(seatLayout).map(rowLabel => (
-                  <div className="seat-row" key={rowLabel}>
-                    <div className="seat-label">{rowLabel}</div>
-                    
-                    {seatLayout[rowLabel].seats.map(seatNum => {
-                      const seatName = `${rowLabel}${seatNum}`;
-                      const isOccupied = seatLayout[rowLabel].occupied.includes(seatNum);
-                      const isSelected = selectedSeats.includes(seatName);
+                {Object.keys(seatsData).map(row => (
+                  <div className="seat-row d-flex justify-content-center mb-2" key={row}>
+                    <div className="seat-label fw-bold me-3" style={{width: '20px'}}>{row}</div>
+                    {seatsData[row].map(seat => {
+                      // Logic màu sắc ghế
+                      let seatClass = "seat btn m-1 ";
+                      if (seat.is_booked) {
+                        seatClass += "btn-secondary disabled"; // Ghế đã bán (Màu xám/đen)
+                      } else if (selectedSeatIds.includes(seat.seat_id)) {
+                        seatClass += "btn-warning"; // Ghế đang chọn (Màu vàng)
+                      } else {
+                        seatClass += "btn-outline-secondary"; // Ghế trống
+                      }
 
-                      // Tính toán className động
-                      let seatClass = 'seat';
-                      if (isOccupied) seatClass += ' occupied';
-                      if (isSelected) seatClass += ' selected';
-
-                      // Trả về JSX cho ghế
-                      // Dùng React.Fragment để bọc ghế và spacer (nếu có)
                       return (
-                        <React.Fragment key={seatName}>
-                          <div
-                            className={seatClass}
-                            // Chỉ cho phép click nếu không 'occupied'
-                            onClick={() => !isOccupied && handleSeatClick(seatName)}
-                          >
-                            {seatNum}
-                          </div>
-                          
-                          {/* Thêm spacer sau ghế được chỉ định */}
-                          {seatLayout[rowLabel].spacerAfter === seatNum && (
-                            <div className="seat-spacer"></div>
-                          )}
-                        </React.Fragment>
+                        <button 
+                          key={seat.seat_id} 
+                          className={seatClass}
+                          style={{width: '40px', height: '40px'}}
+                          onClick={() => handleSeatClick(seat)}
+                          disabled={seat.is_booked}
+                        >
+                          {seat.seat_number}
+                        </button>
                       );
                     })}
                   </div>
                 ))}
               </div>
-
-              <div className="seat-legend">
-                <div className="legend-item"><div className="seat"></div><span>Trống</span></div>
-                <div className="legend-item"><div className="seat selected"></div><span>Đang chọn</span></div>
-                <div className="legend-item"><div className="seat occupied"></div><span>Đã bán</span></div>
+              
+              {/* Chú thích */}
+              <div className="mt-4 d-flex justify-content-center gap-3">
+                 <div><span className="badge bg-secondary p-2 me-1"> </span> Đã bán</div>
+                 <div><span className="badge bg-warning p-2 me-1"> </span> Đang chọn</div>
+                 <div><span className="badge border border-secondary text-secondary p-2 me-1"> </span> Trống</div>
               </div>
             </div>
           </div>
 
-          {/* --- CỘT TÓM TẮT ĐƠN HÀNG (ĐỘNG) --- */}
+          {/* Cột phải: Thông tin & Nút Đặt */}
           <div className="col-lg-4">
-            <div className="booking-summary card">
-              <img 
-                src={process.env.PUBLIC_URL + "/assets/img/aven2018063_cover_0.jpg"} 
-                className="card-img-top"
-                alt="Poster phim" 
-              />
-              <div className="card-body">
-                <h4 className="card-title">AVENGER 2: ĐẾ CHẾ ULTRON</h4>
-                <p className="mb-1"><i className="fas fa-map-marker-alt me-2"></i>GEMINI CINEMAS HÀ TĨNH</p>
-                <p><i className="fas fa-calendar-alt me-2"></i>Thứ Năm, 09/10/2025 - 19:00</p>
-                
-                <hr />
-                
-                <div className="d-flex justify-content-between">
-                  <span>Ghế đang chọn:</span>
-                  {/* Hiển thị các ghế đã chọn từ state */}
-                  <span id="selected-seats" className="fw-bold">
-                    {selectedSeats.length > 0 ? selectedSeats.join(', ') : 'Chưa chọn ghế'}
-                  </span>
-                </div>
-                <div className="d-flex justify-content-between mt-2">
-                  <span>Tạm tính:</span>
-                  {/* Hiển thị tổng tiền từ state */}
-                  <h5 id="total-price" className="text-primary fw-bold">
-                    {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(totalPrice)}
-                  </h5>
-                </div>
-                
-                {/* Dùng Form để bao bọc nút, xử lý bằng onSubmit */}
-                <form onSubmit={handleSubmit}>
-                  <div className="d-grid mt-4">
-                    {/* Nút này sẽ submit form và gọi hàm handleSubmit */}
-                    <button type="submit" className="btn btn-primary btn-lg">
-                      TIẾP TỤC
-                    </button>
-                  </div>
-                </form>
-              </div>
+            <div className="card shadow-sm">
+               <div className="card-body">
+                   <h5 className="card-title">Thông tin đặt vé</h5>
+                   <p className="text-muted mb-1">Khách hàng: <strong>{storedUser ? storedUser.name : 'Khách'}</strong></p>
+                   <hr/>
+                   <h4>Tổng tiền</h4>
+                   <h2 className="text-primary">
+                     {(selectedSeatIds.length * TICKET_PRICE).toLocaleString()} đ
+                   </h2>
+                   <hr/>
+                   <p>Ghế đã chọn: <b>{selectedSeatIds.length}</b></p>
+                   <button onClick={handleBooking} className="btn btn-primary w-100 btn-lg">
+                       XÁC NHẬN ĐẶT VÉ
+                   </button>
+               </div>
             </div>
           </div>
+
         </div>
       </div>
     </div>
