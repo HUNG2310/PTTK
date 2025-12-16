@@ -22,3 +22,177 @@
 
 .promotion-card { transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out; border: none; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
 .promotion-card:hover { transform: translateY(-5px); box-shadow: 0 8px 16px rgba(0,0,0,0.2); }
+/* --- 1. GLOBAL STYLES (NỀN TỐI) --- */
+body {
+    background-color: #121212; /* Màu đen than */
+    color: #e0e0e0; /* Chữ màu trắng khói */
+    font-family: 'Roboto', sans-serif;
+}
+
+h2.section-heading {
+    color: #ffc107; /* Màu vàng Gold rạp phim */
+    font-weight: 800;
+    letter-spacing: 2px;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+}
+
+h3.section-subheading {
+    color: #a0a0a0 !important;
+    font-style: italic;
+    font-weight: 300;
+}
+
+/* --- 2. MOVIE CARDS (HIỆU ỨNG THẺ PHIM) --- */
+.movie-card, .movie-card-coming-soon, .promotion-card, .card {
+    background-color: #1f1f1f; /* Màu thẻ tối hơn nền */
+    border: none;
+    border-radius: 12px;
+    overflow: hidden;
+    transition: all 0.4s ease; /* Hiệu ứng mượt mà */
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+}
+
+/* Khi rê chuột vào thẻ */
+.movie-card:hover, .promotion-card:hover, .card:hover {
+    transform: translateY(-10px); /* Bay lên 10px */
+    box-shadow: 0 15px 30px rgba(255, 193, 7, 0.2); /* Đổ bóng vàng nhẹ */
+}
+
+.card-img-top, .img-fluid {
+    transition: transform 0.5s ease;
+}
+
+.movie-card:hover .img-fluid {
+    transform: scale(1.05); /* Phóng to ảnh nhẹ khi rê chuột */
+}
+
+.card-title {
+    color: #ffffff;
+    font-weight: bold;
+}
+
+.card-text {
+    color: #b0b0b0;
+}
+
+/* --- 3. BUTTONS (NÚT BẤM) --- */
+.btn-primary {
+    background-color: #ffc107;
+    border-color: #ffc107;
+    color: #000;
+    font-weight: 700;
+    padding: 10px 25px;
+    border-radius: 30px; /* Bo tròn nút */
+    text-transform: uppercase;
+    transition: all 0.3s;
+}
+
+.btn-primary:hover {
+    background-color: #ffca2c;
+    box-shadow: 0 0 15px rgba(255, 193, 7, 0.6); /* Phát sáng */
+    transform: scale(1.05);
+}
+
+/* --- 4. SECTIONS (CÁC KHỐI) --- */
+.page-section {
+    padding: 5rem 0;
+}
+
+/* Nền xen kẽ: Khối tối và khối tối hơn */
+.bg-dark-section {
+    background-color: #121212;
+}
+
+.bg-light-section {
+    background-color: #1a1a1a; /* Sáng hơn nền chính một chút */
+    border-top: 1px solid #333;
+    border-bottom: 1px solid #333;
+}
+
+/* --- 5. MASTHEAD (BANNER) --- */
+header.masthead {
+    /* Thêm lớp phủ tối để chữ dễ đọc hơn */
+    /* Dùng tạm ảnh online để fix lỗi */
+background: linear-gradient(to bottom, rgba(0,0,0,0.3), rgba(0,0,0,0.8)), url('https://cdn.pixabay.com/photo/2017/11/24/10/43/ticket-2974645_1280.jpg');
+    background-size: cover;
+    background-position: center;
+    border-bottom: 5px solid #ffc107;
+}
+
+.masthead-heading {
+    text-shadow: 2px 2px 10px rgba(0,0,0,0.8);
+    color: #fff !important;
+}
+/* --- BANNER SLIDER --- */
+.masthead-slider {
+    position: relative;
+    width: 100%;
+    height: 100vh; /* Chiều cao full màn hình hoặc 600px tùy bạn */
+    min-height: 600px;
+    background-color: #000;
+    overflow: hidden;
+    margin-bottom: 0;
+}
+
+.banner-item {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-size: cover;
+    background-position: center;
+    transition: opacity 1s ease-in-out; /* Hiệu ứng mờ dần trong 1s */
+    opacity: 0;
+}
+
+.banner-item.active {
+    opacity: 1; /* Chỉ hiện banner đang active */
+}
+
+/* Lớp phủ đen để chữ dễ đọc */
+.banner-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.2) 60%, rgba(0,0,0,0.9) 100%);
+}
+
+.banner-content {
+    position: relative;
+    z-index: 2;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    color: white;
+    padding-top: 50px;
+}
+
+.banner-dots {
+    position: absolute;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 3;
+    display: flex;
+    gap: 10px;
+}
+
+.dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background-color: rgba(255, 255, 255, 0.5);
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.dot.active {
+    background-color: #ffc107; /* Màu vàng */
+    transform: scale(1.3);
+}
