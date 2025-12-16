@@ -168,77 +168,135 @@ function HomePage() {
         </div>
       </section>
 
-      {/* === PHẦN 4: HỆ THỐNG RẠP (GIỮ NGUYÊN) === */}
+      {/* === PHẦN 4: HỆ THỐNG RẠP === */}
       <section className="page-section bg-dark-section" id="theaters">
         <div className="container">
           <div className="text-center mb-5">
             <h2 className="section-heading text-uppercase text-warning">Hệ Thống Rạp</h2>
             <h3 className="section-subheading text-white-50">Không gian hiện đại, trải nghiệm tối đa.</h3>
           </div>
+          
           <div className="row">
-            {cinemas.map((cinema, index) => (
-              <div className="col-lg-6 mb-4" key={cinema.cinema_id}>
-                <div className="card h-100 text-white bg-dark border-0 shadow-lg overflow-hidden cinema-card-hover"> 
-                  <div className="row g-0 h-100">
-                    <div className="col-md-5">
-                      <img 
-                        src={process.env.PUBLIC_URL + (index % 2 === 0 ? "/assets/img/cinema-1.png" : "/assets/img/imax.png")} 
-                        className="img-fluid h-100 w-100" 
-                        alt={cinema.name} 
-                        style={{ objectFit: 'cover', minHeight: '200px' }}
-                      />
-                    </div>
-                    <div className="col-md-7">
-                      <div className="card-body d-flex flex-column justify-content-center h-100 p-4">
-                        <h5 className="card-title text-warning mb-3 fw-bold">{cinema.name}</h5>
-                        <p className="card-text mb-2 text-white-50"><i className="fas fa-map-marker-alt me-2 text-danger"></i>{cinema.address}</p>
-                        <p className="card-text mb-4 text-white-50"><i className="fas fa-phone me-2 text-success"></i>1900 1234</p>
-                        <div className="d-flex gap-2">
-                            <Link to={`/schedule/${cinema.cinema_id}`} className="btn btn-sm btn-primary flex-grow-1">Lịch Chiếu</Link>
-                            <button className="btn btn-sm btn-outline-light"><i className="fas fa-map"></i> Bản đồ</button>
+            {cinemas.map((cinema, index) => {
+                // --- 1. LOGIC ẢNH (Giữ nguyên) ---
+                const isEven = index % 2 === 0;
+                const imageSrc = isEven 
+                    ? process.env.PUBLIC_URL + "/assets/img/cinema-1.png" 
+                    : process.env.PUBLIC_URL + "/assets/img/imax.png";
+
+                // --- 2. LOGIC BẢN ĐỒ (MỚI THÊM) ---
+                // Nếu là rạp chẵn (Hà Tĩnh) -> Link Google Maps Hà Tĩnh
+                // Nếu là rạp lẻ (Vinh) -> Link Google Maps Vinh
+                const mapLink = isEven
+                    ? "https://www.google.com/maps/search/?api=1&query=Vincom+Plaza+Ha+Tinh" // Link mẫu Hà Tĩnh
+                    : "https://www.google.com/maps/search/?api=1&query=Lotte+Cinema+Vinh";   // Link mẫu Vinh
+
+                return (
+                  <div className="col-lg-6 mb-4" key={cinema.cinema_id}>
+                    <div className="card h-100 text-white bg-dark border-0 shadow-lg overflow-hidden cinema-card-hover" style={{borderRadius: '10px'}}> 
+                      <div className="row g-0 h-100">
+                        {/* CỘT ẢNH */}
+                        <div className="col-md-5 position-relative">
+                          <img 
+                            src={imageSrc}
+                            className="img-fluid h-100 w-100" 
+                            alt={cinema.name} 
+                            style={{ objectFit: 'cover', minHeight: '220px', backgroundColor: isEven ? 'transparent' : '#000' }}
+                          />
+                          {isEven && (
+                              <div className="position-absolute bottom-0 start-0 p-3 text-white" style={{background: 'linear-gradient(to top, rgba(0,0,0,0.8), transparent)', width: '100%'}}>
+                              </div>
+                          )}
+                        </div>
+
+                        {/* CỘT THÔNG TIN */}
+                        <div className="col-md-7">
+                          <div className="card-body d-flex flex-column justify-content-center h-100 p-4">
+                            <h5 className="card-title text-warning mb-2 fw-bold text-uppercase" style={{fontSize: '1.1rem'}}>{cinema.name}</h5>
+                            <p className="card-text mb-2 text-white-50 small" style={{fontSize: '0.85rem'}}>
+                                <i className="fas fa-map-marker-alt me-2 text-danger"></i>{cinema.address}
+                            </p>
+                            <p className="card-text mb-4 text-white-50 small">
+                                <i className="fas fa-phone me-2 text-success"></i>1900 1234
+                            </p>
+                            
+                            <div className="d-flex gap-2 mt-auto">
+                                <Link to={`/cinema/${cinema.cinema_id}`} className="btn btn-warning flex-grow-1 fw-bold text-dark shadow-sm">
+                                    LỊCH CHIẾU
+                                </Link>
+                                
+                                {/* 👉 NÚT BẢN ĐỒ ĐÃ ĐƯỢC CẬP NHẬT */}
+                                <a 
+                                    href={mapLink} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer" 
+                                    className="btn btn-outline-light" 
+                                    style={{minWidth: '80px'}}
+                                >
+                                    <i className="fas fa-map-marked-alt me-1"></i> Bản đồ
+                                </a>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              </div>
-            ))}
-             {cinemas.length === 0 && !loading && <p className="text-center text-white">Đang cập nhật danh sách rạp...</p>}
+                );
+            })}
           </div>
         </div>
       </section>
 
-      {/* === PHẦN 5: KHUYẾN MÃI (GIỮ NGUYÊN) === */}
-      <section className="page-section bg-light-section" id="promotions">
+      {/* === PHẦN 5: KHUYẾN MÃI === */}
+      <section className="page-section bg-dark-section" id="promotions">
         <div className="container">
           <div className="text-center mb-5">
             <h2 className="section-heading text-uppercase text-warning">Ưu Đãi Đặc Biệt</h2>
-            <h3 className="section-subheading text-muted">Săn deal hời, xem phim thả ga.</h3>
+            <h3 className="section-subheading text-muted" style={{fontStyle: 'italic'}}>Săn deal hời, xem phim thả ga.</h3>
           </div>
+          
           <div className="row">
             {promotions.map(promo => (
               <div className="col-md-6 col-lg-4 mb-5" key={promo.promotion_id}>
-                <div className="card h-100 promotion-card border-0 shadow bg-dark">
-                  <div className="position-relative overflow-hidden">
+                {/* Card thiết kế giống hình: Nền tối, bo góc */}
+                <div className="card h-100 bg-dark border-0 shadow-lg" style={{borderRadius: '10px', overflow: 'hidden'}}>
+                  
+                  {/* Phần Ảnh */}
+                  <div className="position-relative">
                       <img 
-                        src={process.env.PUBLIC_URL + promo.image_url} 
+                        // Kiểm tra nếu là link online (http) thì dùng luôn, nếu là file cục bộ thì thêm process.env
+                        src={promo.image_url.startsWith('http') ? promo.image_url : process.env.PUBLIC_URL + promo.image_url} 
                         className="card-img-top" 
                         alt={promo.title} 
                         style={{height: '220px', objectFit: 'cover'}}
                       />
-                      <div className="badge bg-danger position-absolute top-0 end-0 m-3 px-3 py-2 shadow">HOT</div>
+                      {/* Badge HOT màu đỏ */}
+                      <div className="badge bg-danger position-absolute top-0 end-0 m-3 px-3 py-2 shadow" style={{fontSize: '0.9rem'}}>HOT</div>
                   </div>
                   
-                  <div className="card-body d-flex flex-column p-4">
-                    <h5 className="card-title text-white mb-3 fw-bold" style={{minHeight: '48px'}}>{promo.title}</h5>
-                    <p className="card-text text-muted small mb-3">
-                        <i className="far fa-clock me-2 text-warning"></i>
+                  {/* Phần Nội Dung */}
+                  <div className="card-body d-flex flex-column p-4 text-center">
+                    {/* Tiêu đề viết hoa, màu trắng */}
+                    <h5 className="card-title text-white mb-3 fw-bold text-uppercase" style={{minHeight: '48px', fontSize: '1.1rem'}}>
+                        {promo.title}
+                    </h5>
+                    
+                    {/* Thời gian: màu xám */}
+                    <p className="card-text text-white-50 small mb-3">
                         {new Date(promo.start_date).toLocaleDateString('vi-VN')} - {new Date(promo.end_date).toLocaleDateString('vi-VN')}
                     </p>
-                    <p className="card-text text-white-50 flex-grow-1" style={{ fontSize: '0.9rem' }}>
+
+                    {/* Mô tả ngắn */}
+                    <p className="card-text text-muted flex-grow-1" style={{ fontSize: '0.9rem' }}>
                         {promo.description.length > 80 ? promo.description.substring(0, 80) + "..." : promo.description}
                     </p>
-                    <Link to={`/promotion/${promo.promotion_id}`} className="btn btn-outline-warning w-100 mt-3 rounded-pill">
+                    
+                    {/* Nút bấm: Viền vàng, bo tròn (rounded-pill) */}
+                    <Link 
+                        to={`/promotion/${promo.promotion_id}`} 
+                        className="btn btn-outline-warning w-100 mt-3 rounded-pill py-2"
+                        style={{borderWidth: '1px'}}
+                    >
                         Chi Tiết Ưu Đãi
                     </Link>
                   </div>

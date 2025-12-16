@@ -186,3 +186,217 @@ const PORT = 5000;
 app.listen(PORT, () => {
     console.log(`Server đang chạy tại http://localhost:${PORT}`);
 });
+// --- API 9: LẤY LỊCH CHIẾU CỦA 1 PHIM ---
+app.get('/api/movies/:id/showtimes', async (req, res) => {
+    try {
+        await sql.connect(dbConfig);
+        const movieId = req.params.id;
+
+        // Lấy suất chiếu + Tên rạp + Tên phòng
+        // Chỉ lấy các suất chiếu trong tương lai (start_time > GETDATE())
+        const query = `
+            SELECT 
+                s.showtime_id, s.start_time, s.price,
+                r.name as room_name,
+                c.name as cinema_name
+            FROM Showtimes s
+            JOIN Rooms r ON s.room_id = r.room_id
+            JOIN Cinemas c ON r.cinema_id = c.cinema_id
+            WHERE s.movie_id = ${movieId}
+            ORDER BY s.start_time ASC
+        `;
+        
+        const result = await sql.query(query);
+        res.json(result.recordset);
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Lỗi lấy lịch chiếu');
+    }
+});
+// --- API 10: LẤY CHI TIẾT 1 SUẤT CHIẾU (Để hiển thị trang thanh toán) ---
+app.get('/api/showtimes/:id', async (req, res) => {
+    try {
+        await sql.connect(dbConfig);
+        const { id } = req.params;
+        const query = `
+            SELECT s.showtime_id, s.start_time, s.price, 
+                   m.title as movie_title, m.poster_url,
+                   r.name as room_name, c.name as cinema_name, c.address
+            FROM Showtimes s
+            JOIN Movies m ON s.movie_id = m.movie_id
+            JOIN Rooms r ON s.room_id = r.room_id
+            JOIN Cinemas c ON r.cinema_id = c.cinema_id
+            WHERE s.showtime_id = ${id}
+        `;
+        const result = await sql.query(query);
+        res.json(result.recordset[0]);
+    } catch (err) {
+        res.status(500).send('Lỗi');
+    }
+});
+// --- API 11: LẤY DANH SÁCH PHIM & SUẤT CHIẾU CỦA 1 RẠP ---
+app.get('/api/cinemas/:id', async (req, res) => {
+    try {
+        await sql.connect(dbConfig);
+        const { id } = req.params;
+
+        // 1. Lấy thông tin Rạp
+        const cinemaQuery = `SELECT * FROM Cinemas WHERE cinema_id = ${id}`;
+        const cinemaRes = await sql.query(cinemaQuery);
+        const cinema = cinemaRes.recordset[0];
+
+        if (!cinema) return res.status(404).json({ message: 'Không tìm thấy rạp' });
+
+        // 2. Lấy các phim đang chiếu tại rạp này
+        // (Logic: Tìm suất chiếu tương lai tại các phòng thuộc rạp này)
+        const moviesQuery = `
+            SELECT DISTINCT m.movie_id, m.title, m.poster_url, m.genre, m.duration_minutes
+            FROM Showtimes s
+            JOIN Rooms r ON s.room_id = r.room_id
+            JOIN Movies m ON s.movie_id = m.movie_id
+            WHERE r.cinema_id = ${id} AND s.start_time > GETDATE()
+        `;
+        const moviesRes = await sql.query(moviesQuery);
+        
+        // Trả về: Thông tin rạp + Danh sách phim
+        res.json({ ...cinema, movies: moviesRes.recordset });
+
+    } catch (err) {
+        console.log(err);
+        res.status(500).send('Lỗi lấy chi tiết rạp');
+    }
+});
+// --- API 12: LẤY CHI TIẾT 1 KHUYẾN MÃI ---
+app.get('/api/promotions/:id', async (req, res) => {
+    try {
+        await sql.connect(dbConfig);
+        const { id } = req.params;
+        const query = `SELECT * FROM Promotions WHERE promotion_id = ${id}`;
+        const result = await sql.query(query);
+        res.json(result.recordset[0]);
+    } catch (err) {
+        res.status(500).send('Lỗi');
+    }
+});
+// ... (Các API cũ giữ nguyên)
+
+// --- NHÓM API ADMIN: QUẢN LÝ PHIM ---
+
+// 13. THÊM PHIM MỚI
+app.post('/api/admin/movies', async (req, res) => {
+    try {
+        await sql.connect(dbConfig);
+        const { title, description, duration_minutes, genre, release_date, poster_url, trailer_url, status } = req.body;
+        
+        const query = `
+            INSERT INTO Movies (title, description, duration_minutes, genre, release_date, poster_url, trailer_url, status)
+            VALUES (N'${title}', N'${description}', ${duration_minutes}, N'${genre}', '${release_date}', '${poster_url}', '${trailer_url}', '${status}')
+        `;
+        await sql.query(query);
+        res.json({ success: true, message: 'Thêm phim thành công!' });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ success: false, message: 'Lỗi server' });
+    }
+});
+
+// 14. XÓA PHIM
+app.delete('/api/admin/movies/:id', async (req, res) => {
+    try {
+        await sql.connect(dbConfig);
+        const { id } = req.params;
+        // Xóa suất chiếu liên quan trước (Ràng buộc khóa ngoại)
+        await sql.query(`DELETE FROM Showtimes WHERE movie_id = ${id}`);
+        // Xóa phim
+        await sql.query(`DELETE FROM Movies WHERE movie_id = ${id}`);
+        
+        res.json({ success: true, message: 'Xóa phim thành công!' });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ success: false, message: 'Lỗi server' });
+    }
+});
+
+// 15. SỬA PHIM
+app.put('/api/admin/movies/:id', async (req, res) => {
+    try {
+        await sql.connect(dbConfig);
+        const { id } = req.params;
+        const { title, description, duration_minutes, genre, release_date, poster_url, trailer_url, status } = req.body;
+
+        const query = `
+            UPDATE Movies 
+            SET title = N'${title}', 
+                description = N'${description}', 
+                duration_minutes = ${duration_minutes}, 
+                genre = N'${genre}', 
+                release_date = '${release_date}', 
+                poster_url = '${poster_url}', 
+                trailer_url = '${trailer_url}', 
+                status = '${status}'
+            WHERE movie_id = ${id}
+        `;
+        await sql.query(query);
+        res.json({ success: true, message: 'Cập nhật thành công!' });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ success: false, message: 'Lỗi server' });
+    }
+});
+// --- NHÓM API ADMIN: QUẢN LÝ KHUYẾN MÃI ---
+
+// 16. THÊM KHUYẾN MÃI MỚI
+app.post('/api/admin/promotions', async (req, res) => {
+    try {
+        await sql.connect(dbConfig);
+        const { title, description, discount_percentage, start_date, end_date, image_url } = req.body;
+        
+        const query = `
+            INSERT INTO Promotions (title, description, discount_percentage, start_date, end_date, image_url)
+            VALUES (N'${title}', N'${description}', ${discount_percentage || 0}, '${start_date}', '${end_date}', '${image_url}')
+        `;
+        await sql.query(query);
+        res.json({ success: true, message: 'Thêm ưu đãi thành công!' });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ success: false, message: 'Lỗi server' });
+    }
+});
+
+// 17. SỬA KHUYẾN MÃI
+app.put('/api/admin/promotions/:id', async (req, res) => {
+    try {
+        await sql.connect(dbConfig);
+        const { id } = req.params;
+        const { title, description, discount_percentage, start_date, end_date, image_url } = req.body;
+
+        const query = `
+            UPDATE Promotions 
+            SET title = N'${title}', 
+                description = N'${description}', 
+                discount_percentage = ${discount_percentage || 0}, 
+                start_date = '${start_date}', 
+                end_date = '${end_date}', 
+                image_url = '${image_url}'
+            WHERE promotion_id = ${id}
+        `;
+        await sql.query(query);
+        res.json({ success: true, message: 'Cập nhật thành công!' });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ success: false, message: 'Lỗi server' });
+    }
+});
+
+// 18. XÓA KHUYẾN MÃI
+app.delete('/api/admin/promotions/:id', async (req, res) => {
+    try {
+        await sql.connect(dbConfig);
+        const { id } = req.params;
+        await sql.query(`DELETE FROM Promotions WHERE promotion_id = ${id}`);
+        res.json({ success: true, message: 'Xóa ưu đãi thành công!' });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ success: false, message: 'Lỗi server' });
+    }
+});

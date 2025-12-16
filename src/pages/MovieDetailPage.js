@@ -1,113 +1,130 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useParams } from 'react-router-dom'; // Import thêm useParams
-import { allMovies } from '../data/allMovies'; // Import dữ liệu phim
+import { Link, useParams } from 'react-router-dom';
+import '../css/custom-styles.css'; // Đảm bảo import CSS
 
 function MovieDetailPage() {
-  
-  // 1. Lấy 'id' từ thanh địa chỉ (ví dụ: /movie/4 -> id sẽ là "4")
   const { id } = useParams(); 
-  
-  // 2. Tạo state để lưu thông tin phim sẽ được tải
   const [movie, setMovie] = useState(null);
+  const [showtimes, setShowtimes] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  // 3. Tải dữ liệu phim khi component được render
   useEffect(() => {
-    // Tìm phim trong 'database' (file allMovies.js)
-    // Dùng '==' vì id từ URL là string, id trong data là number
-    const foundMovie = allMovies.find(m => m.id == id);
-    setMovie(foundMovie);
-    
-    // Cuộn lên đầu trang mỗi khi vào chi tiết phim
-    window.scrollTo(0, 0); 
+    const fetchData = async () => {
+      try {
+        // Gọi API lấy thông tin phim
+        const movieRes = await fetch(`http://localhost:5000/api/movies/${id}`);
+        const movieData = await movieRes.json();
+        setMovie(movieData);
 
-  }, [id]); // Phụ thuộc vào [id] -> Chạy lại khi id thay đổi
+        // Gọi API lấy lịch chiếu
+        const showRes = await fetch(`http://localhost:5000/api/movies/${id}/showtimes`);
+        const showData = await showRes.json();
+        setShowtimes(showData);
 
-  // 4. Xử lý trường hợp đang tải hoặc không tìm thấy phim
-  if (!movie) {
-    return (
-      <section className="page-section">
-        <div className="container text-center">
-          <h2>Đang tải...</h2>
-        </div>
-      </section>
-    );
-  }
+        setLoading(false);
+        window.scrollTo(0, 0);
+      } catch (error) {
+        console.error("Lỗi tải dữ liệu:", error);
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, [id]); 
 
-  // 5. Render giao diện với dữ liệu phim đã tìm thấy
+  if (loading) return <div className="text-center text-white mt-5 pt-5">Đang tải dữ liệu...</div>;
+  if (!movie) return <div className="text-center text-white mt-5 pt-5">Không tìm thấy phim.</div>;
+
   return (
-    <section className="page-section">
+    // 👉 SỬA LẠI: Dùng bg-dark-section thay vì bg-light để chữ trắng hiện rõ trên nền tối
+    <section className="page-section bg-dark-section" style={{paddingTop: '8rem', paddingBottom: '5rem', minHeight: '100vh'}}>
       <div className="container">
         <div className="row">
-          <div className="col-md-4">
+          {/* Cột Trái: Poster */}
+          <div className="col-md-4 mb-4">
             <img 
-              className="img-fluid rounded" 
-              src={process.env.PUBLIC_URL + movie.posterUrl} 
+              className="img-fluid rounded shadow-lg border border-warning" 
+              src={process.env.PUBLIC_URL + movie.poster_url} 
               alt={movie.title}
+              style={{width: '100%'}}
             />
           </div>
 
-          <div className="col-md-8">
-            <h1 className="display-5 fw-bolder">{movie.title}</h1>
-            <div className="fs-5 mb-3">
-              <span>{movie.genre}</span>
-              <span className="text-muted mx-2">|</span>
-              {/* Định dạng lại ngày tháng cho đẹp */}
+          {/* Cột Phải: Thông tin phim */}
+          <div className="col-md-8 text-white">
+            <h1 className="display-4 fw-bold text-uppercase text-warning mb-3">{movie.title}</h1>
+            
+            <div className="fs-5 mb-4 text-white-50">
+              <span className="badge bg-warning text-dark me-2">{movie.genre}</span>
+              <span className="me-2">|</span>
+              <span><i className="far fa-clock me-1"></i> {movie.duration_minutes} phút</span>
+              <span className="mx-2">|</span>
               <span>Khởi chiếu: {new Date(movie.release_date).toLocaleDateString('vi-VN')}</span>
             </div>
-            <p className="lead">{movie.description}</p>
             
-            <h4 className="mt-4">Trailer</h4>
-            <div className="ratio ratio-16x9">
-              <iframe 
-                src={movie.trailerUrl}
-                title="YouTube video player" 
-                allowFullScreen>
-              </iframe>
-            </div>
+            <p className="lead text-light">{movie.description}</p>
+            
+            {/* Trailer */}
+            {movie.trailer_url && (
+                <div className="mt-4 mb-5">
+                    <h4 className="text-warning border-bottom border-secondary pb-2 mb-3">Trailer</h4>
+                    <div className="ratio ratio-16x9 shadow">
+                        <iframe 
+                            src={movie.trailer_url.replace("watch?v=", "embed/")}
+                            title="Trailer" 
+                            allowFullScreen
+                        ></iframe>
+                    </div>
+                </div>
+            )}
+
+            {/* --- PHẦN LỊCH CHIẾU --- */}
+            {movie.status === 'now_showing' && (
+              <div className="card bg-dark border border-secondary shadow-lg">
+                  <div className="card-header border-secondary text-center py-3">
+                      <h4 className="m-0 text-uppercase text-warning">Lịch Chiếu Phim</h4>
+                  </div>
+                  <div className="card-body p-4">
+                      {showtimes.length === 0 ? (
+                          <p className="text-center text-muted">Chưa có lịch chiếu nào được cập nhật.</p>
+                      ) : (
+                          <div>
+                              <h5 className="text-white mb-3">
+                                  <i className="fas fa-map-marker-alt text-danger me-2"></i>
+                                  {showtimes[0].cinema_name || "RẠP TRUNG TÂM"}
+                              </h5>
+                              
+                              <div className="d-flex flex-wrap gap-3">
+                                  {showtimes.map(st => (
+                                      <Link 
+                                          key={st.showtime_id}
+                                          to={`/booking/${st.showtime_id}`} 
+                                          className="btn btn-outline-warning px-4 py-2 text-center"
+                                          style={{minWidth: '100px'}}
+                                      >
+                                          <div className="fw-bold fs-5">
+                                              {new Date(st.start_time).toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'})}
+                                          </div>
+                                          <div className="small text-white-50">
+                                              {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(st.price)}
+                                          </div>
+                                      </Link>
+                                  ))}
+                              </div>
+                          </div>
+                      )}
+                  </div>
+              </div>
+            )}
+
+            {/* --- PHẦN SẮP CHIẾU --- */}
+            {movie.status === 'coming_soon' && (
+                <div className="alert alert-dark border-warning text-center" role="alert">
+                    <h3 className="text-warning">Sắp Khởi Chiếu</h3>
+                    <p className="lead">Hẹn gặp lại bạn vào ngày {new Date(movie.release_date).toLocaleDateString('vi-VN')}</p>
+                </div>
+            )}
           </div>
         </div>
-
-        {/* ========================================================== */}
-        {/* PHẦN LOGIC QUAN TRỌNG NHẤT: HIỂN THỊ NỘI DUNG TÙY TRẠNG THÁI */}
-        {/* ========================================================== */}
-        
-        {/* A. Nếu là PHIM ĐANG CHIẾU -> Hiển thị lịch chiếu */}
-        {movie.status === 'now_showing' && (
-          <div className="row mt-5">
-            <div className="col-12">
-              <h2 className="text-uppercase text-center text-primary">Lịch Chiếu</h2>
-              <hr />
-              <div className="text-center my-4">
-                <button className="btn btn-primary">Hôm nay, 09/10</button>
-                <button className="btn btn-outline-dark">Ngày mai, 10/10</button>
-              </div>
-              <div className="cinema-schedule">
-                <h4 className="cinema-name">CINEMA HÀ TĨNH</h4>
-                <p className="cinema-address text-muted">Số 01, Đường ABC, Phường XYZ</p>
-                <div className="showtime-list">
-                  <h6 className="mt-3">2D Phụ đề</h6>
-                  {/* Chuyển link sang trang chọn ghế */}
-                  <Link to="/booking/seats" className="btn btn-outline-dark me-2 mb-2">19:00</Link>
-                  <Link to="/booking/seats" className="btn btn-outline-dark me-2 mb-2">20:30</Link>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* B. Nếu là PHIM SẮP CHIẾU -> Hiển thị thông báo ngày ra mắt */}
-        {movie.status === 'coming_soon' && (
-          <div className="row mt-5 text-center">
-            <div className="col-12">
-              <h2 className="text-uppercase text-primary">Sắp Khởi Chiếu</h2>
-              <h3 className="display-6 fw-bold mt-3">
-                Dự kiến ra mắt: {new Date(movie.release_date).toLocaleDateString('vi-VN')}
-              </h3>
-              <p className="lead text-muted">Phim hiện chưa có lịch chiếu. Hãy quay lại sau nhé!</p>
-            </div>
-          </div>
-        )}
-
       </div>
     </section>
   );
