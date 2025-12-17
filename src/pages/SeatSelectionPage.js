@@ -13,7 +13,7 @@ function SeatSelectionPage() {
 
   const storedUser = JSON.parse(localStorage.getItem('currentUser'));
 
-  // --- 1. TẢI DỮ LIỆU GHẾ ---
+ // --- 1. TẢI DỮ LIỆU GHẾ (Code gọn nhẹ vì Server đã xử lý tốt) ---
   useEffect(() => {
     if (!storedUser) {
       alert("Bạn cần đăng nhập để đặt vé!");
@@ -24,6 +24,7 @@ function SeatSelectionPage() {
     fetch(`http://localhost:5000/api/showtimes/${showtimeId}/seats`)
       .then(res => res.json())
       .then(data => {
+        // Không cần filter uniqueSeats nữa, dùng thẳng data
         const groupedSeats = {};
         data.forEach(seat => {
           if (!groupedSeats[seat.row_char]) {
@@ -31,6 +32,7 @@ function SeatSelectionPage() {
           }
           groupedSeats[seat.row_char].push(seat);
         });
+        
         setSeatsData(groupedSeats);
         setLoading(false);
       })
@@ -51,7 +53,7 @@ function SeatSelectionPage() {
     }
   };
 
-  // --- 3. XỬ LÝ CHUYỂN TRANG THANH TOÁN (QUAN TRỌNG) ---
+  // --- 3. XỬ LÝ CHUYỂN TRANG THANH TOÁN ---
   const handleBooking = () => {
     // Kiểm tra đăng nhập
     if (!storedUser) {
@@ -65,7 +67,7 @@ function SeatSelectionPage() {
       return;
     }
 
-    // 👉 THAY VÌ GỌI API NGAY, TA CHUYỂN SANG TRANG CHECKOUT
+    // Chuyển sang trang Checkout với dữ liệu
     navigate('/booking/checkout', {
       state: {
         selectedSeatIds: selectedSeatIds,

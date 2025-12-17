@@ -16,6 +16,8 @@ import AllComingSoonPage from './pages/AllComingSoonPage';
 import CinemaDetailPage from './pages/CinemaDetailPage';     // Trang chi tiết Rạp
 import PromotionDetailPage from './pages/PromotionDetailPage'; // Trang chi tiết Khuyến mãi
 import AdminPromotionsPage from './pages/admin/AdminPromotionsPage';
+import AdminUsersPage from './pages/admin/AdminUsersPage';
+import AdminShowtimesPage from './pages/admin/AdminShowtimesPage';
 
 // --- IMPORT CÁC TRANG ADMIN (QUẢN TRỊ) ---
 import AdminMoviesPage from './pages/admin/AdminMoviesPage';   // Trang quản lý Phim
@@ -83,6 +85,8 @@ function App() {
         
         {/* Trang Quản lý Phim */}
         <Route path="/admin/movies" element={<AdminMoviesPage />} />
+        <Route path="/admin/users" element={<AdminUsersPage />} />
+        <Route path="/admin/showtimes" element={<AdminShowtimesPage />} />
 
         {/* Đường dẫn mặc định /admin sẽ trỏ thẳng vào trang quản lý phim luôn */}
         <Route path="/admin" element={<AdminMoviesPage />} />
